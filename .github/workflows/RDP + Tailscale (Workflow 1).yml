@@ -7,8 +7,8 @@ on:
       ts_api_key:         { description: "Tailscale API key (device admin, no Bearer)", required: true }
       ts_authkey:         { description: "Tailscale Auth key", required: true }
       quick_test:         { description: "Run 5-minute test", type: boolean, default: false }
-      runtime_minutes:    { description: "Runtime minutes", required: false, default: "355" }
-      do_purge:           { description: "Purge bullet* devices", required: false, default: "true" }
+      runtime_minutes:    { description: "Runtime minutes", required: false, default: "1440" }  # 24 hours default
+      do_purge:           { description: "Purge windows* devices", required: false, default: "true" }
       rdp_count:          { description: "RDP instance count (1-10)", required: false, default: "1" }
       cycles_left:        { description: "Number of full cycles remaining", required: false, default: "5" }
 
@@ -39,17 +39,17 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
-    timeout-minutes: 370
+    timeout-minutes: 1440   # 24 hours timeout
     env:
-      RDP_USER: Bullettemporary
-      RDP_PASS: Bullet@12345
+      RDP_USER: PritamGaming
+      RDP_PASS: @Herobrine99
 
     steps:
       - name: Decide runtime
         run: |
           function Yes($v){ "$v" -match '^(?i:true|1|yes|on)$' }
           $rt=if(Yes("${{ inputs.quick_test }}")){5}else{[int]"${{ inputs.runtime_minutes }}"}
-          if($rt -gt 360){$rt=355}
+          if($rt -gt 1440){$rt=1440}  # 24 hours cap
           "RUNTIME_MINUTES=$rt"|Out-File -Append $env:GITHUB_ENV
           Write-Host "Runtime set to $rt minutes"
 
@@ -62,7 +62,7 @@ jobs:
             Invoke-WebRequest $url -OutFile $dst
             Start-Process msiexec.exe -ArgumentList "/i","`"$dst`"","/quiet","/norestart" -Wait
           }
-          & $ts up --authkey "${{ inputs.ts_authkey }}" --hostname "bullet1" --accept-dns=true
+          & $ts up --authkey "${{ inputs.ts_authkey }}" --hostname "Windows11" --accept-dns=true
           $ip=& $ts ip -4 |Select-Object -First 1
           "TAILSCALE_IP=$ip"|Out-File -Append $env:GITHUB_ENV
           Write-Host "Tailscale IPv4: $ip"
@@ -88,7 +88,10 @@ jobs:
       - name: Keep alive
         run: |
           $end=(Get-Date).AddMinutes([int]"${{ env.RUNTIME_MINUTES }}")
-          while((Get-Date) -lt $end){Write-Host ("Workflow1 heartbeat "+(Get-Date));Start-Sleep 60}
+          while((Get-Date) -lt $end){
+            Write-Host ("Workflow1 heartbeat "+(Get-Date))
+            Start-Sleep 60
+          }
 
       - name: Dispatch Workflow 2
         if: always()
